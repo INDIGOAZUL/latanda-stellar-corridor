@@ -1,0 +1,20 @@
+# Rust / Cargo
+/target
+**/target
+Cargo.lock
+**/*.rs.bk
+
+# Soroban build artifacts
+*.wasm
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets — never commit keys/identities
+.env
+*.pem
+*.key
+.soroban/
+identity.toml
