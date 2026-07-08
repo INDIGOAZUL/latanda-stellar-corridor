@@ -159,3 +159,14 @@ Deck: 5–7 slides — problem (remittance cost / trapped tandas), solution
 (non-custodial Stellar corridor), this contract, the SV-pilot → HN-expansion
 sequencing, milestones/budget, team, links. Paste the repo URL + recording URL
 into §11 of the SCF proposal before submitting.
+
+---
+
+## 8. Demo video
+
+- **Demo video:** _(to be added — record per the storyboard, upload to YouTube unlisted / Loom, then paste the link here and in proposal §11)_
+- Full shot-by-shot storyboard: `stellar-demo-recording-frame.md` (La Tanda plans).
+- On-chain references to show while recording:
+  - Contract: https://stellar.expert/explorer/testnet/contract/CBEJFGS23EI5MNJF4GAFHJSWDWXLIMAK2MWNWQI5H7VBTXRRUD6BA52U
+  - Lock tx: https://stellar.expert/explorer/testnet/tx/f6e615e09d003215c4bba44b4c94035870979f061e2bf5f507bfc722c716c813
+  - Release tx: https://stellar.expert/explorer/testnet/tx/ffe1a4f76e9cc82557aa506d159d6a40a439faa056add5b861933bcbaaa30167
