@@ -164,7 +164,7 @@ into §11 of the SCF proposal before submitting.
 
 ## 8. Demo video
 
-- **Demo video:** _(to be added — record per the storyboard, upload to YouTube unlisted / Loom, then paste the link here and in proposal §11)_
+- **Demo video (~2:52):** https://youtu.be/izL3i273vhU — escrow live on Stellar testnet, product walkthrough, on-chain lock→release proof
 - Full shot-by-shot storyboard: `stellar-demo-recording-frame.md` (La Tanda plans).
 - On-chain references to show while recording:
   - Contract: https://stellar.expert/explorer/testnet/contract/CBEJFGS23EI5MNJF4GAFHJSWDWXLIMAK2MWNWQI5H7VBTXRRUD6BA52U
