@@ -1,3 +1,10 @@
+> **Historical document (SCF #45 application, mid-2026) — not current plans.**
+> This file is preserved as submitted for transparency. The Stellar Community Fund #45
+> application it was written for was **not selected**. Corridor framing (US → El Salvador
+> pilot, MoneyGram Ramps, "funded by the grant", "non-custodial") reflects that
+> application, not La Tanda's current design. Current status: [`../../README.md`](../../README.md)
+> — escrow on Stellar testnet, corridor to Honduras in design, no mainnet, no signed ramp partner.
+
 # Corridor Architecture
 
 How the Soroban **Corridor-Escrow** contract in this repo fits into La Tanda's
