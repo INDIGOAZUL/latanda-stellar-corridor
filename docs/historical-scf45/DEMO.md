@@ -1,3 +1,5 @@
+> **Histórico, SCF #45, reemplazado por [ARCHITECTURE.md](../ARCHITECTURE.md).** (Historical, SCF #45, superseded by ARCHITECTURE.md. Contract paths here refer to `contracts/corridor-escrow`, now `contracts/corridor-escrow-v1`.)
+
 > **Historical document (SCF #45 application, mid-2026) — not current plans.**
 > This file is preserved as submitted for transparency. The Stellar Community Fund #45
 > application it was written for was **not selected**. Corridor framing (US → El Salvador

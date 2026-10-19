@@ -1,25 +1,16 @@
 #![no_std]
-//! # Corridor Escrow
+//! # Corridor Escrow v1 -- DEPRECATED
 //!
-//! A **non-custodial** USDC escrow contract for La Tanda's cross-border
-//! remittance / rotating-savings (tanda) payout corridor on Stellar (Soroban).
+//! **Deprecated.** This is the SCF #45 prototype, kept only so the source of the
+//! testnet deployment `CBEJFGS23EI5MNJF4GAFHJSWDWXLIMAK2MWNWQI5H7VBTXRRUD6BA52U`
+//! stays reviewable. It is superseded by `contracts/tanda-escrow`.
 //!
-//! ## What it does
-//! A diaspora **sender** locks USDC into an escrow keyed by a `corridor/payout id`.
-//! The funds can only ever move to two pre-committed destinations:
-//!  * **release** -> to the `recipient` recorded at lock time (the tanda cycle
-//!    beneficiary, or the anchor / MoneyGram payout address that cashes them out), or
-//!  * **refund**  -> back to the original `sender`, once the escrow has expired.
-//!
-//! ## Non-custodial design
-//! The contract holds funds *in escrow per corridor logic only*. La Tanda (as the
-//! `admin` / coordinator) can **trigger a release to the pre-recorded recipient**
-//! or a refund — it can **never** re-address funds to an arbitrary account or
-//! sweep the balance. Destinations are fixed at `lock` time by the sender. This
-//! keeps custody with the escrow rules, not with La Tanda.
-//!
-//! The regulated fiat cash-in / cash-out legs are performed off-chain by a
-//! **licensed Stellar anchor / MoneyGram Ramps**, not by this contract.
+//! What it actually does: a sender locks a token into an escrow with a recorded
+//! recipient and expiry. **`release` requires the `admin` signature** (La Tanda
+//! as operator decides *when* to pay), and `refund` after expiry can be
+//! triggered by the sender or the admin. The admin cannot choose a different
+//! destination, but it does control timing. That is why it is **not**
+//! described as non-custodial or trustless. See `docs/ARCHITECTURE.md`.
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, symbol_short, token, Address, Env, Symbol,

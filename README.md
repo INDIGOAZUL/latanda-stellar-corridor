@@ -1,38 +1,45 @@
-# La Tanda — Stellar Corridor Escrow
+# La Tanda on Stellar: tanda escrow
 
-A **USDC corridor escrow smart contract** (Soroban / Rust, **Stellar testnet**) for
-La Tanda's US → Honduras family-savings corridor: a diaspora sender in the US
-locks USDC that can only be released to a pre-recorded recipient (or refunded to
-the sender after expiry). **Destination-restricted escrow, operator-triggered
-release. No mainnet deployment.**
+A **rotating-savings group (tanda) escrow** smart contract for Stellar (Soroban /
+Rust). The group's members, contribution amount, payout order and calendar are
+written on-chain when the group is created and cannot be changed afterwards.
+Members pay in from their own wallets; each round's pot is paid to that round's
+beneficiary by a `release` call that **anyone can submit and no admin approves**.
+If a round is not fully funded, each member who paid can take back their own
+contribution.
 
-The live La Tanda product (rotating-savings groups in Honduras) runs today on a
-**Cosmos** app-chain and a Node.js/PostgreSQL backend; this repo is a **separate,
-experimental Stellar rail** that is not wired into that product.
+**Stellar testnet only. Not audited. No mainnet deployment.**
 
-- Live product: https://latanda.online
+- Design and full flow: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- Testnet run of a complete 3-member, 3-round tanda: [`docs/testnet-trace.md`](docs/testnet-trace.md)
+- Live La Tanda product: https://latanda.online
 - Live product figures (canonical): https://latanda.online/api/public/metrics
 - Founder GitHub: https://github.com/INDIGOAZUL
 
+The live La Tanda product (rotating-savings groups in Honduras) runs today on a
+**Cosmos** app-chain and a Node.js/PostgreSQL backend. This repo is a **separate
+Stellar rail** and is not wired into that product yet.
+
 ---
 
-## Status (Sep 2026)
+## Status (Oct 2026)
 
-- **Escrow contract:** built and unit-tested against `soroban-sdk 26.1.0`;
-  deployed and exercised on **Stellar testnet** only. Not on mainnet, not in
-  production.
-- **Corridor to Honduras:** in design. The recipient-side cash-out for Honduras
-  is an open dependency.
-- **Licensed on/off-ramp:** in negotiation with a licensed partner. **No LOI or
-  signed agreement yet.** The regulated fiat legs (KYC/AML, cash-in, cash-out)
-  would sit with that licensed partner, not with La Tanda and not with this
-  contract.
+- **`tanda-escrow` contract (v2):** written against `soroban-sdk 26.1`, 21 unit
+  tests, deployed on **Stellar testnet** and exercised with a full 3x3 tanda
+  using Circle's testnet USDC. Not audited, not on mainnet.
+- **Ramp partner: MoneyGram Ramps** (cash-in and cash-out of Stellar USDC, to and
+  from the user's own wallet; KYC/AML by MoneyGram). Integration tested in
+  **sandbox** only; production access requires KYB. MoneyGram appears on the
+  [SCF Integration List](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/integration-track/integration-list)
+  as "Moneygram".
+- **First payout country (planned):** El Salvador (USD). Payout to Honduras in
+  lempiras through MoneyGram Ramps is not verified.
 - **Stellar Community Fund #45:** La Tanda applied (Integration Track) and was
-  **not selected**. The panel's feedback has been incorporated into the current
-  design and into how this repo describes itself. The original application
-  material is preserved unchanged under
-  [`docs/historical-scf45/`](docs/historical-scf45/) for transparency; it does
-  **not** describe current plans.
+  **not selected**. The panel's feedback is reflected in this repo (see
+  [ARCHITECTURE.md, section 6](docs/ARCHITECTURE.md#6-what-changed-since-scf-45-and-why)).
+  The original application material is preserved under
+  [`docs/historical-scf45/`](docs/historical-scf45/) and does **not** describe
+  current plans.
 - **Live product numbers (2026-09-09, from the endpoint above):** 80 registered
   users (not KYC-verified), 5 groups, 41 completed real-money payouts,
   L 1,652,100 HNL (≈ US$63,500) cycled. Those numbers describe the Cosmos-side
@@ -40,131 +47,98 @@ experimental Stellar rail** that is not wired into that product.
 
 ---
 
-## What this contract is
+## How it works
 
-A **sender** locks USDC into an escrow keyed by a corridor/payout id. The funds
-can only ever move to two destinations that are **fixed at lock time**:
+```
+ Member (US)                                           Beneficiary (e.g. El Salvador)
+     │ cash/card                                                     ▲ cash (USD)
+     ▼                                                               │
+ MoneyGram Ramps ──USDC──► member's own wallet        beneficiary's own wallet ──USDC──► MoneyGram Ramps
+  (cash-in, KYC)                  │                                ▲                (cash-out, KYC)
+                                  │ contribute()                   │ release()
+                                  │ signed by the member           │ any account may submit;
+                                  ▼                                │ pays payout_order[round]
+                       ┌──────────────────────────────────────────┴───┐
+                       │ tanda-escrow (Soroban)                       │
+                       │ immutable rules: members, amount, order,     │
+                       │ calendar, grace. No admin.                   │
+                       │ incomplete round after grace → refund() of   │
+                       │ each member's own contribution               │
+                       └──────────────────────────────────────────────┘
 
-- **release** → the pre-recorded `recipient` (the savings-group beneficiary, or
-  a licensed ramp's payout address that cashes the funds out to fiat), or
-- **refund** → back to the original `sender`, once the escrow expiry ledger passes.
+ La Tanda app: sign-up, reminders, indexer of contract events. Holds no keys, no funds.
+```
 
-An `admin` (the La Tanda **operator / coordinator**) can *trigger* a release to
-the recipient or a refund per the rules, but can **never** re-address funds to
-an arbitrary account or sweep the balance. The escrow rules, not the operator,
-decide where the money can go.
+### Who can move money
 
-### Custody note (plain language)
+- **Members**: pay in their own money (signed), and take back their own
+  contribution from an incomplete round after the grace period (signed).
+- **Anyone**: can submit `release` for a round that is due and fully funded; the
+  pot always goes to the beneficiary recorded for that round.
+- **La Tanda / the group creator**: no admin role exists. They cannot withdraw,
+  redirect, pause or sweep funds. The contract has no upgrade function.
 
-- The **contract** holds the USDC between `lock` and `release`/`refund`.
-- The **operator** can only trigger the pre-committed outcomes; it cannot redirect
-  or withdraw the funds.
-- Fiat cash-in / cash-out would be performed off-chain by a **licensed ramp
-  partner** (none contracted yet), not by La Tanda and not by this contract.
-
-We describe this as *destination-restricted escrow with operator-triggered
-release* and deliberately avoid stronger custody claims for it.
+We do not call this "trustless": users still rely on the Stellar network, the
+USDC issuer, MoneyGram for the fiat legs, and an unaudited contract. Details and
+risks: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
-## How it would fit the corridor
+## Contract API (`contracts/tanda-escrow`)
 
-```
-                        US  →  Honduras   (corridor in design)
-
-  ┌───────────┐   fiat in    ┌──────────────┐   USDC     ┌────────────────────────┐
-  │  US-based │  (licensed   │  Stellar     │  lock()    │  Soroban               │
-  │  sender   │ ───────────► │  wallet      │ ─────────► │  Corridor-Escrow       │
-  │ (diaspora)│  ramp, TBD)  │              │            │  contract (this repo)  │
-  └───────────┘              └──────────────┘            │                        │
-                                                         │  status: FUNDED        │
-                                                         └───────────┬────────────┘
-                                                                     │
-                                          operator triggers          │ release()
-                                          the pre-committed payout    ▼
-  ┌───────────┐   cash out    ┌──────────────┐   USDC     ┌────────────────────────┐
-  │ recipient │  (licensed    │  ramp payout │ ◄───────── │  pays pre-recorded     │
-  │ / family  │ ◄─────────────│  address     │            │  recipient (or ramp    │
-  │  in HN    │  ramp, TBD)   │              │            │  payout address)       │
-  └───────────┘               └──────────────┘            └────────────────────────┘
-
-  On timeout (expiry_ledger passed) instead of release():  refund() → back to sender.
-
-  Settlement boundary: the La Tanda rotating-savings ledger lives on the Cosmos
-  app-chain (latanda-testnet-1). A Cosmos↔Stellar settlement coordinator that ties
-  a group contribution/payout to this escrow leg is designed, not built.
-```
-
----
-
-## Contract API
-
-| Function | Auth | Effect |
+| Function | Signature required | Effect |
 |---|---|---|
-| `initialize(admin, token)` | — (once) | Sets the operator + escrowed asset (USDC SAC address). |
-| `lock(sender, escrow_id, recipient, amount, expiry_ledger)` | `sender` | Pulls `amount` USDC from sender into escrow; records `recipient` + expiry; status → `Funded`. |
-| `release(escrow_id)` | `admin` | Pays the **pre-recorded** recipient; status → `Released`. |
-| `refund(caller, escrow_id)` | `sender` or `admin` | After `expiry_ledger`, returns funds to the **original sender**; status → `Refunded`. |
-| `get_escrow(escrow_id)` / `get_config()` | — (view) | Read escrow / config state. |
+| `create_group(creator, token, members, contribution, payout_order, start_ts, round_secs, grace_secs)` | `creator` | Stores immutable rules; returns `group_id`. |
+| `contribute(group_id, member, round)` | `member` | Pulls exactly `contribution` from the member. Once per member and round. |
+| `release(group_id, round)` | none | If due and fully funded: pays the pot to `payout_order[round]`. Once per round. |
+| `refund(group_id, member, round)` | `member` | Incomplete round, after due + grace: returns that member's own contribution. |
+| `get_group`, `get_round`, `get_contribution`, `round_due_ts` | none | Views. |
 
-Every state transition emits an event (`init` / `lock` / `release` / `refund`) so
-off-chain services can react.
+Events: `group_created`, `contributed`, `released`, `refunded`.
 
 ---
 
 ## Build, test, deploy (testnet)
 
-Toolchain: **Rust** + the `wasm32-unknown-unknown` target + the **Stellar CLI**
-(`stellar` / `soroban`). Contract targets **`soroban-sdk = 26.1.0`**.
+Toolchain: **Rust** with the `wasm32v1-none` target, and the **Stellar CLI**.
 
 ```bash
-# 1. Toolchain (once)
-rustup target add wasm32-unknown-unknown
-cargo install --locked stellar-cli    # provides the `stellar` (a.k.a. soroban) CLI
+# Unit tests (both contracts)
+cargo test
 
-# 2. Unit tests (native)
-cargo test                            # run from repo root or contracts/corridor-escrow
+# Optimized Wasm
+cd contracts/tanda-escrow && stellar contract build
+# -> target/wasm32v1-none/release/tanda_escrow.wasm
 
-# 3. Build the optimized Wasm
-stellar contract build
-# artifact: target/wasm32-unknown-unknown/release/corridor_escrow.wasm
-
-# 4. Deploy to Stellar TESTNET
-stellar keys generate --global deployer --network testnet --fund
-CID=$(stellar contract deploy \
-  --wasm target/wasm32-unknown-unknown/release/corridor_escrow.wasm \
-  --source deployer --network testnet)
-echo "Deployed: $CID"
+# Full 3-member / 3-round tanda on testnet (throwaway identities deployer, m1, m2, m3
+# must exist in $STELLAR_CONFIG_HOME, funded with Friendbot)
+STELLAR_CONFIG_HOME=$PWD/.stellar-testnet scripts/testnet-tanda-3x3.sh
 ```
-
-A step-by-step `lock → release` / `lock → timeout → refund` walkthrough with real
-CLI commands is preserved in
-[`docs/historical-scf45/DEMO.md`](docs/historical-scf45/DEMO.md) (written for the
-SCF application; the commands still work, the corridor framing there is
-historical).
 
 ---
 
 ## Repository layout
 
 ```
-contracts/corridor-escrow/
-  Cargo.toml            # soroban-sdk 26.1.0, cdylib + rlib, release profile
-  src/lib.rs            # the Corridor-Escrow contract
-  src/test.rs           # unit tests (lock→release, timeout→refund, authz, edge cases)
-Cargo.toml              # workspace
-README.md               # this file
-docs/historical-scf45/  # SCF #45 application material, preserved as submitted (not current plans)
-  DEMO.md
-  architecture.md
-  STELLAR-INTEGRATION.md
-  La-Tanda-SCF45-Deck-v2.pdf
-LICENSE                 # Apache-2.0
+contracts/tanda-escrow/         # v2: the tanda escrow (current)
+contracts/corridor-escrow-v1/   # v1: SCF #45 prototype, DEPRECATED (admin-triggered release)
+scripts/testnet-tanda-3x3.sh    # end-to-end testnet run
+docs/ARCHITECTURE.md            # design, flow, custody, risks
+docs/testnet-trace.md           # transaction hashes of the testnet run
+docs/historical-scf45/          # SCF #45 material, preserved, superseded
+LICENSE                         # Apache-2.0
 ```
+
+### Why v1 is kept (deprecated) instead of deleted
+
+`corridor-escrow-v1` is the source of the earlier testnet deployment
+`CBEJFGS23EI5MNJF4GAFHJSWDWXLIMAK2MWNWQI5H7VBTXRRUD6BA52U`, which is referenced in
+the SCF #45 material and demo video. Keeping its source lets anyone check what
+that deployment did (its `release` required the admin's signature) and compare
+it with v2. It is not used by anything new.
 
 ---
 
 ## License
 
-Apache-2.0 — see [`LICENSE`](LICENSE). Published as a reusable open-source escrow
-pattern for rotating-savings / recurring cross-border payments.
+Apache-2.0, see [`LICENSE`](LICENSE).
