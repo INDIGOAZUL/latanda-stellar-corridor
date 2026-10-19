@@ -14,7 +14,7 @@ It describes one flow with one set of partners:
 - **La Tanda:** the app (sign-up, reminders, indexer). It does not sign for users
   and does not hold their keys or their money.
 
-No Bridge, no Stellar Disbursement Platform (SDP), no CCTP in this flow. Why each
+No Stellar Disbursement Platform (SDP) and no CCTP in this flow. Why each
 one was dropped is explained in [Section 6](#6-what-changed-since-scf-45-and-why).
 
 ---
@@ -204,7 +204,7 @@ wired to this contract today.
 | CCTP mint into a corridor account, then `lock()` that needed the sender's signature. | Member receives USDC in their own wallet from MoneyGram and signs `contribute`. | Panel point 5: the seam was unclear. |
 | CCTP for inbound USDC. | **Removed** from the flow. | MoneyGram delivers Stellar USDC directly; CCTP would only matter for a member who already holds USDC on another chain, which is that member's own action and not part of this design. |
 | SDP paid beneficiaries. | **Removed.** The contract pays the beneficiary directly. | Panel point 5: "who pays the beneficiary, SDP or escrow?" Now only the escrow. |
-| Bridge as off-ramp (Honduras). | **Removed.** MoneyGram Ramps for both ramps. | Bridge told us it does not support USDC on Stellar (and its pricing was high for us); a MoneyGram Ramps sandbox cash-out is already verified. |
+| A separate off-ramp partner (Honduras). | MoneyGram Ramps for both ramps. | MoneyGram Ramps was chosen because it is on the SCF Integration List and operates a non-custodial on/off-ramp on Stellar (USDC to and from the user's own wallet). |
 | README, DEMO, architecture and STELLAR-INTEGRATION described different partners. | One document (this one) and a README that matches it. Old docs kept, marked historical. | Panel point 2. |
 
 ### SCF Integration List
