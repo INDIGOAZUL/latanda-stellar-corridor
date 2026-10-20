@@ -14,7 +14,7 @@ It describes one flow with one set of partners:
 - **La Tanda:** the app (sign-up, reminders, indexer). It does not sign for users
   and does not hold their keys or their money.
 
-No Bridge, no Stellar Disbursement Platform (SDP), no CCTP in this flow. Why each
+No Stellar Disbursement Platform (SDP) and no CCTP in this flow. Why each
 one was dropped is explained in [Section 6](#6-what-changed-since-scf-45-and-why).
 
 ---
@@ -46,9 +46,9 @@ sequenceDiagram
     C-->>APP: event group_created (rules are now immutable)
 
     Note over S,C: Every round, every member
-    S->>MGin: Pays cash / card at MoneyGram (KYC by MoneyGram)
-    MGin->>WS: USDC sent to the member's own Stellar address (SEP-24 flow)
-    APP-->>S: Reminder: "round r is due on <date>"
+    S->>MGin: Pays cash at a MoneyGram location (KYC by MoneyGram)
+    MGin->>WS: USDC sent to the member's own Stellar address
+    APP-->>S: Reminder: round r is due on its due date
     S->>C: contribute(group, member, round)<br/>signed by the member in their wallet
     C->>C: pulls exactly `amount` USDC from the member's wallet
     C-->>APP: event contributed
@@ -59,7 +59,7 @@ sequenceDiagram
     C-->>APP: event released
 
     Note over WB,B: Cash-out (optional)
-    B->>MGout: Starts a withdrawal in their wallet (SEP-24, KYC by MoneyGram)
+    B->>MGout: Starts a withdrawal from their wallet (KYC by MoneyGram)
     WB->>MGout: USDC sent by the beneficiary
     MGout->>B: Cash in local currency (USD in El Salvador) at a MoneyGram location
 
@@ -70,9 +70,9 @@ sequenceDiagram
 
 ### 2.1 Entry: cash-in with MoneyGram Ramps
 
-The member in the US buys USDC through **MoneyGram Ramps** (cash or card at a
+The member in the US buys USDC through **MoneyGram Ramps** (cash at a
 MoneyGram location), and MoneyGram sends it **directly to the member's own Stellar
-wallet**. The wallet runs the SEP-24 interactive flow; MoneyGram does the KYC/AML
+wallet**. The wallet runs MoneyGram's ramp flow; MoneyGram does the KYC/AML
 for that transaction. La Tanda is not in the money path: it never receives the
 fiat and never receives the USDC.
 
@@ -107,7 +107,8 @@ needed**: if the La Tanda app stopped working, the beneficiary (or anyone) could
 submit `release` directly.
 
 The beneficiary can then keep the USDC in their wallet or cash out with
-**MoneyGram Ramps** (SEP-24 withdrawal). For El Salvador the payout currency is USD.
+**MoneyGram Ramps**. El Salvador uses the US dollar, so no currency conversion is
+needed there.
 
 ### 2.4 If a member does not pay
 
@@ -184,7 +185,8 @@ wired to this contract today.
   **sandbox** only (one verified cash-out); refund, cash-in completion and
   webhooks are still to be tested; production access requires KYB.
 - **Payout countries.** We have planned El Salvador (USD) as the first payout
-  country because MoneyGram pays out in USD there. Payout to Honduras in lempiras
+  country because it uses the US dollar. MoneyGram Ramps cash-out there has not
+  been confirmed in production yet. Payout to Honduras in lempiras
   through MoneyGram Ramps has **not** been verified by us.
 - **Storage TTL.** Soroban persistent entries expire if not extended. The contract
   extends TTL on every write; a group untouched for months may need a restore
@@ -202,7 +204,7 @@ wired to this contract today.
 | CCTP mint into a corridor account, then `lock()` that needed the sender's signature. | Member receives USDC in their own wallet from MoneyGram and signs `contribute`. | Panel point 5: the seam was unclear. |
 | CCTP for inbound USDC. | **Removed** from the flow. | MoneyGram delivers Stellar USDC directly; CCTP would only matter for a member who already holds USDC on another chain, which is that member's own action and not part of this design. |
 | SDP paid beneficiaries. | **Removed.** The contract pays the beneficiary directly. | Panel point 5: "who pays the beneficiary, SDP or escrow?" Now only the escrow. |
-| Bridge as off-ramp (Honduras). | **Removed.** MoneyGram Ramps for both ramps. | Bridge told us it does not support USDC on Stellar (and its pricing was high for us); a MoneyGram Ramps sandbox cash-out is already verified. |
+| A separate off-ramp partner (Honduras). | MoneyGram Ramps for both ramps. | MoneyGram Ramps was chosen because it is on the SCF Integration List and operates a non-custodial on/off-ramp on Stellar (USDC to and from the user's own wallet). |
 | README, DEMO, architecture and STELLAR-INTEGRATION described different partners. | One document (this one) and a README that matches it. Old docs kept, marked historical. | Panel point 2. |
 
 ### SCF Integration List
